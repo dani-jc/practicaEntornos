@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Formulario interactivo</title>
+	<style>
+		* {
+			font-family: "Segoe UI", sans-serif;
+		}
+
+		body {
+			background-color: #1e3c72;
+			height: 100vh;
+			margin: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.principal {
+			background: white;
+			padding: 30px 40px;
+			width: 420px;
+			border-radius: 12px;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+		}
+
+		.principal h2 {
+			margin-bottom: 20px;
+			color: #2a5298;
+			text-align: center;
+		}
+
+
+		.fila {
+			display: flex;
+			gap: 15px;
+			margin-bottom: 15px;
+		}
+
+		.elemento {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+		}
+
+		label {
+			font-size: 14px;
+			margin-bottom: 6px;
+			color: #555;
+		}
+
+		input,
+		textarea,
+		select {
+			padding: 10px 12px;
+			border-radius: 6px;
+			border: 1px solid #ccc;
+			transition: 0.3s;
+		}
+
+		textarea {
+			resize: vertical;
+			min-height: 80px;
+		}
+
+		input:focus,
+		textarea:focus,
+		select:focus {
+			border-color: #2a5298;
+			outline: none;
+			box-shadow: 0 0 0 2px rgba(42, 82, 152, 0.2);
+		}
+
+		.elementosRadio {
+			display: flex;
+			gap: 15px;
+			margin-top: 5px;
+		}
+
+		.elementosRadio label {
+			display: flex;
+			align-items: center;
+			gap: 5px;
+		}
+
+		/* Botones */
+		.botones {
+			display: flex;
+			justify-content: space-between;
+			margin-top: 25px;
+		}
+
+		.boton {
+			padding: 10px 25px;
+			border: none;
+			border-radius: 6px;
+			cursor: pointer;
+		}
+
+		.btnPrimario {
+			background: #2a5298;
+			color: white;
+		}
+
+		.btnPrimario:disabled {
+			background: #CCCCCC;
+			color: white;
+			cursor: default;
+		}
+
+		.btnSecundario {
+			background: #eee;
+		}
+
+		#historialLateral {
+			position: fixed;
+			right: 0;
+			top: 0;
+			height: 100vh;
+			width: 260px;
+			background: #DDDDDD;
+			border-left: 3px solid #2a5298;
+			padding: 15px;
+			overflow-y: auto;
+			box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+			font-size: 13px;
+		}
+
+		#historialLateral h3 {
+			margin-top: 0;
+			color: #2a5298;
+			text-align: center;
+		}
+
+		.mensajeItem {
+			border-bottom: 1px solid #ddd;
+			padding: 6px 0;
+		}
+
+		.botonItem {
+			margin-left: 5px;
+			padding: 5px;
+			cursor: pointer;
+		}
+	</style>
+
+	<script>
+		/* para probar: ?nombre=uno&apellido=dos&email=tres@cuatro.es&motivo=soporte */
+
+		const dirección = new URLSearchParams(window.location.search);
+		let nombreVálido = false;	// en caso de que el nombre tenga una longitud de al menos 3 carácteres
+		let correoVálido = false;	// en caso de que el correo tenga @
+
+		document.addEventListener("DOMContentLoaded", function () {
+			let nombre = document.getElementById("nombre");
+			let apellido = document.getElementById("apellido");
+			let email = document.getElementById("email");
+			let selector = document.getElementById("motivo");
+
+			let formulario = document.getElementById("formulario");
+			let h2 = document.querySelectorAll("div.principal>h2");
+			const info = document.querySelectorAll("div#info");	// <div> para informar de errores
+			const botónEnvío = document.querySelectorAll("#formulario .botones .btnPrimario");
+
+			let lateral = document.getElementById("historialLateral");
+			//let contadorHistorial = 1;
+			let mensajes = [];	// Para almacenar los contactos
+
+
+			// para la función error_habilitar()
+			const infoError = document.createElement("p");
+			infoError.innerHTML = "<span>El nombre debe tener al menos 3 caracteres.<br>El correo debe contener @.</span>";
+			info[0].append(infoError);	// metemos el mensaje en el <div id="info">
+			infoError.style.display = "none";
+
+			// Mostrará un mensaje de error si el nombre y el correo no son válidos, y si lo son, habilitará el botón 'Enviar'
+			function error_habilitar() {
+				if (!nombreVálido || !correoVálido) {
+					infoError.style.display = "block";
+					botónEnvío[0].disabled = true;
+				} else {
+					infoError.style.display = "none";
+					botónEnvío[0].disabled = false;
+				}
+			}
+
+
+			// VALIDAR VALORES URL
+			if (dirección.has("nombre")) {
+				if (dirección.get("nombre").length >= 3) {
+					nombre.value = dirección.get("nombre");
+					nombreVálido = true;
+				}
+			}
+
+			if (dirección.has("apellido")) {
+				apellido.value = dirección.get("apellido");
+			}
+
+			if (dirección.has("email")) {
+				/* Si no existe división el array devuelto por split() tendrá 
+				una longitud de 1. Si existe, tendrá una longitud de 2 
+				(las 2 divisiones)*/
+				if (dirección.get("email").split("@").length > 1) {
+					email.value = dirección.get("email");
+					correoVálido = true;
+				}
+			}
+
+			// aunque luego, evaluaremos el evento 'change', aquí también cambio el título en función del valor del selector
+			if (dirección.has("motivo")) {
+				if (dirección.get("motivo") == "soporte") {
+					selector.value = "soporte";
+					h2[0].textContent = "Contacto Soporte Técnico";
+				} else if (dirección.get("motivo") == "ventas") {
+					selector.value = "ventas";
+					h2[0].textContent = "Contacto Ventas";
+				} else if (dirección.get("motivo").length > 0) {
+					// otra forma de poner el valor de una opción del select
+					selector.value = motivo.options[3].value;
+					h2[0].textContent = "Contacto";
+				} else {
+					selector.value = motivo.options[0].value;
+				}
+			}
+
+			error_habilitar();	// tras cargarse la página evalúo la validez de los elementos
+
+
+			// COMPROBAR VALIDEZ CONTÍNUAMENTE (a cada pulsación de teclado)
+			formulario.addEventListener("keyup", function (evento) {
+				if (nombre.value.length < 3) {
+					nombreVálido = false;
+				} else if (nombre.value.length >= 3) {
+					nombreVálido = true;
+				}
+
+				if (email.value.split("@").length <= 1 || email.value.split("@").length > 2) { // He considerado que no puede haber más de un @
+					correoVálido = false;
+				} else {
+					if (email.value[0] != '@' && email.value[email.value.length - 1] != '@') {	// compruebo que no empiece ni termine por @
+						correoVálido = true;
+					}
+				}
+				error_habilitar();
+			});
+
+			// CAMBIAR h2
+			selector.addEventListener("change", function () {
+				if (selector.value == "soporte") {
+					h2[0].textContent = "Contacto Soporte Técnico";
+				}
+
+				if (selector.value == "ventas") {
+					h2[0].textContent = "Contacto Ventas";
+				}
+
+				if (selector.value == "otros") {
+					h2[0].textContent = "Contacto";
+				}
+			});
+
+
+			/** Al clicar sobre "Enviar" se meten los datos introducidos en un array, y después, 
+			 * se llama a mostrarHistorial() para que los saque en el lateral */
+			botónEnvío[0].addEventListener("click", function (evento) {
+				if (botónEnvío[0].disabled == false) {	// solo clicable si está habilitado
+					let párrafo = document.createElement("p");
+					let datos = {
+						"nombre": nombre.value,
+						"apellido": apellido.value,
+						"email": email.value,
+						"motivo": motivo.value
+					}
+					mensajes.push(datos);
+					mostrarHistorial();
+ 
+					// Parece ser que localStorage solo almacena texto (valor).
+					// Guarda los datos como clave-valor: Un nombre para identificar los datos almacenados (clave) y los datos en sí (valor)
+					localStorage.setItem("mensajes", JSON.stringify(mensajes));
+				}
+			});
+
+			/** saca los datos del array como entradas en un lateral de la página */
+			function mostrarHistorial() {
+				borrarTodoVisualmente()	// quita todos los elementos, para recargarlos
+				for (let i = 0; i < mensajes.length; i++) {
+					// Se crea el texto de la entrada
+					let entrada = document.createElement("div");
+					entrada.className = "mensajeItem";	// className no dado
+					entrada.textContent = i + 1 + ". " + mensajes[i].nombre + " " + mensajes[i].apellido + " (" + mensajes[i].motivo + ")";
+
+					// Botón de eliminación de la entrada
+					let botonEliminacionSingular = document.createElement("input");
+					botonEliminacionSingular.className = "botonItem";
+					botonEliminacionSingular.type = "button";
+					botonEliminacionSingular.value = "X";
+						// para que visualmente se muestre como en la imagen
+						botonEliminacionSingular.style.display = "block";
+						botonEliminacionSingular.style.marginTop = "0.3em";
+						botonEliminacionSingular.style.marginLeft = "0";
+
+					lateral.append(entrada);
+					entrada.append(botonEliminacionSingular);
+
+					botonEliminacionSingular.addEventListener("click", function (evento) {
+						mensajes[i] = mensajes[mensajes.length - 1];
+						mensajes.pop();
+						localStorage.setItem("mensajes", JSON.stringify(mensajes));
+
+						if (mensajes.length == 1) { // si no hay entradas quito el botón de 'Borrar todo'
+							let botB = lateral.querySelectorAll("#historialLateral #borrarTodo");
+							botB[0].remove();
+						}
+						borrarTodoVisualmente();
+						mostrarHistorial();
+					})
+				}
+
+				if (mensajes.length > 0) {	// se crea el botón "Borrar todo" si hay entradas en el lateral
+					botonEliminacion = document.createElement("input");
+					botonEliminacion.id = "borrarTodo"
+					botonEliminacion.type = "button";
+					botonEliminacion.value = "Borrar todo";
+						// aspecto
+						botonEliminacion.style.display = "block";
+						botonEliminacion.style.marginTop = "1em";
+						botonEliminacion.style.width = "80%";
+						botonEliminacion.style.cursor = "pointer";
+					lateral.append(botonEliminacion);
+
+					botonEliminacion.addEventListener("click", function () {
+						borrarTodoVisualmente();
+						for (let i = mensajes.length - 1; i >= 0; i--) {	// pop() reduce el tamaño del array. Hay que empezar por el final
+							mensajes.pop();
+						}
+						localStorage.setItem("mensajes", JSON.stringify(mensajes));
+					});
+				}
+			};
+
+			function borrarTodoVisualmente() {
+				// quitamos las entradas
+				let historial = lateral.querySelectorAll("#historialLateral .mensajeItem");
+				for (let i = 0; i < historial.length; i++) {
+					historial[i].remove();
+				}
+				// quitamos el botón "Borrar todo"
+				let botB = lateral.querySelectorAll("#historialLateral #borrarTodo");
+				if (botB.length == 1) {
+					botB[0].remove();
+				}
+			}
+
+			function cargarLocalstorage() {
+				if(localStorage.getItem("mensajes")) {
+					mensajes = JSON.parse(localStorage.getItem("mensajes"));
+				}
+				mostrarHistorial();
+			}
+			cargarLocalstorage();	// cargamos el localStorage
+
+		});	// cierre listener DomContentLoaded
+	</script>
+</head>
+
+<body>
+
+	<div class="principal">
+		<h2>Contacto</h2>
+
+		<form id="formulario">
+
+			<div class="fila">
+				<div class="elemento">
+					<label>Nombre</label>
+					<input type="text" id="nombre">
+				</div>
+
+				<div class="elemento">
+					<label>Apellido</label>
+					<input type="text" id="apellido">
+				</div>
+			</div>
+
+			<div class="elemento">
+				<label>Email</label>
+				<input type="email" id="email">
+			</div>
+
+			<div class="elemento" style="margin-top:15px">
+				<label>Mensaje</label>
+				<textarea id="mensaje"></textarea>
+			</div>
+
+			<div class="elemento" style="margin-top:15px">
+				<label>Motivo de contacto</label>
+				<select id="motivo">
+					<option value="">Seleccione...</option>
+					<option value="soporte">Soporte</option>
+					<option value="ventas">Ventas</option>
+					<option value="otros">Otros</option>
+				</select>
+			</div>
+
+			<div class="botones">
+				<input type="reset" class="boton btnSecundario" value="Limpiar">
+				<input type="button" class="boton btnPrimario" value="Enviar" disabled>
+			</div>
+			<div id="info"></div>
+		</form>
+	</div>
+	<div id="historialLateral">
+	</div>
+
+</body>
+
+</html>
